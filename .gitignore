@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+
+# Python virtualenvs / vendored installs
+.venv/
+venv/
+server/venv/
+server/lib/
+server/python_bundle/
+
+# Local environment and certificate material
+.env
+.env.*
+frontend/.env
+frontend/.env.*
+.certs/
+*.pem
+*.key
+*.crt
+
+# Local runtime logs
+*.log
+
+# Local SQLite databases
+bretter.db
+scripts/bretter.db
+server/bretter.db
+server/bretter.db-*
+
+# Runtime image stores
+images-store/
+winpe-store/
+job-payloads/
+
+# Accidental Windows-path staging artifacts created during Linux-side runs
+C:*/
+C:\*/
+C:\\*/

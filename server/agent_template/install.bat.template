@@ -1,0 +1,120 @@
+@echo off
+setlocal
+:: ============================================================
+::  Bretter-IMG Agent Installer
+::  Server: {{SERVER_URL}}
+::  Includes: Python 3.12 + all dependencies + NSSM
+:: ============================================================
+
+set INSTALL_DIR=C:\ProgramData\BretterIMG
+set PYTHON_DIR=%INSTALL_DIR%\python
+set AGENT_DIR=%INSTALL_DIR%\agent
+set LOG_DIR=%INSTALL_DIR%\logs
+set NSSM=%INSTALL_DIR%\nssm.exe
+set SCRIPT_DIR=%~dp0
+if "%SCRIPT_DIR:~-1%"=="\" set SCRIPT_DIR=%SCRIPT_DIR:~0,-1%
+
+echo.
+echo ============================================================
+echo   Bretter-IMG Agent Installer
+echo   Server: {{SERVER_URL}}
+echo ============================================================
+echo.
+
+:: ── Admin check ─────────────────────────────────────────────
+net session >nul 2>&1
+set ADMERR=%errorlevel%
+if %ADMERR% neq 0 echo ERROR: Must be run as Administrator.
+if %ADMERR% neq 0 echo Right-click install.bat and choose Run as administrator
+if %ADMERR% neq 0 pause
+if %ADMERR% neq 0 exit /b 1
+
+:: ── Remove existing service ──────────────────────────────────
+sc query BretterIMGAgent >nul 2>&1
+set OLDSVC=%errorlevel%
+if %OLDSVC% equ 0 echo [UPGRADE] Stopping existing agent service...
+if %OLDSVC% equ 0 net stop BretterIMGAgent >nul 2>&1
+if %OLDSVC% equ 0 sc delete BretterIMGAgent >nul 2>&1
+if %OLDSVC% equ 0 echo [UPGRADE] Waiting for service removal...
+if %OLDSVC% equ 0 timeout /t 5 /nobreak >nul
+if %OLDSVC% equ 0 echo [UPGRADE] Done. Installing fresh copy.
+echo.
+
+:: ── Create directories ───────────────────────────────────────
+echo [1/5] Creating directories...
+if not exist "%INSTALL_DIR%"       mkdir "%INSTALL_DIR%"
+if not exist "%INSTALL_DIR%\temp"  mkdir "%INSTALL_DIR%\temp"
+if not exist "%INSTALL_DIR%\winpe" mkdir "%INSTALL_DIR%\winpe"
+if not exist "%LOG_DIR%"           mkdir "%LOG_DIR%"
+if not exist "%AGENT_DIR%"         mkdir "%AGENT_DIR%"
+if not exist "%PYTHON_DIR%"        mkdir "%PYTHON_DIR%"
+echo       OK
+
+:: ── Copy bundled Python ──────────────────────────────────────
+echo [2/5] Installing Python...
+set HAVE_PY=0
+if exist "%SCRIPT_DIR%\python\python.exe" set HAVE_PY=1
+if %HAVE_PY%==1 xcopy /E /I /Y /Q "%SCRIPT_DIR%\python" "%PYTHON_DIR%\" >nul
+if %HAVE_PY%==1 echo       Python installed to %PYTHON_DIR%
+if %HAVE_PY%==0 echo       WARNING: No bundled Python found
+echo       OK
+
+:: ── Copy agent files ─────────────────────────────────────────
+echo [3/5] Installing agent files...
+copy /Y "%SCRIPT_DIR%\agent.py"    "%AGENT_DIR%\agent.py"    >nul
+copy /Y "%SCRIPT_DIR%\imaging.py"  "%AGENT_DIR%\imaging.py"  >nul
+copy /Y "%SCRIPT_DIR%\sysinfo.py"  "%AGENT_DIR%\sysinfo.py"  >nul
+copy /Y "%SCRIPT_DIR%\transfer.py" "%AGENT_DIR%\transfer.py" >nul
+copy /Y "%SCRIPT_DIR%\config.py"   "%AGENT_DIR%\config.py"   >nul
+if exist "%SCRIPT_DIR%\bretter-img-ca.crt" copy /Y "%SCRIPT_DIR%\bretter-img-ca.crt" "%AGENT_DIR%\bretter-img-ca.crt" >nul
+copy /Y "%SCRIPT_DIR%\nssm.exe"    "%NSSM%"                  >nul
+if exist "%SCRIPT_DIR%\machine_id.txt" copy /Y "%SCRIPT_DIR%\machine_id.txt" "%INSTALL_DIR%\machine_id.txt" >nul
+if exist "%SCRIPT_DIR%\machine_id.txt" echo       Machine ID seeded
+echo       OK
+
+:: ── Install service via NSSM ─────────────────────────────────
+echo [4/5] Installing Windows service via NSSM...
+"%NSSM%" install BretterIMGAgent "%PYTHON_DIR%\python.exe"
+"%NSSM%" set BretterIMGAgent AppDirectory "%AGENT_DIR%"
+"%NSSM%" set BretterIMGAgent AppParameters "%AGENT_DIR%\agent.py"
+"%NSSM%" set BretterIMGAgent AppEnvironmentExtra "PYTHONHOME=%PYTHON_DIR%" "PYTHONPATH=%PYTHON_DIR%;%PYTHON_DIR%\Lib;%PYTHON_DIR%\Lib\site-packages;%AGENT_DIR%"
+"%NSSM%" set BretterIMGAgent AppStdout "%LOG_DIR%\agent.log"
+"%NSSM%" set BretterIMGAgent AppStderr "%LOG_DIR%\agent.log"
+"%NSSM%" set BretterIMGAgent AppRotateFiles 1
+"%NSSM%" set BretterIMGAgent AppRotateBytes 10485760
+"%NSSM%" set BretterIMGAgent Start SERVICE_AUTO_START
+"%NSSM%" set BretterIMGAgent DisplayName "Bretter-IMG Agent"
+"%NSSM%" set BretterIMGAgent Description "Remote imaging agent for Bretter-IMG console"
+echo       OK
+
+:: ── Start service ────────────────────────────────────────────
+echo [5/5] Starting service...
+net start BretterIMGAgent
+set STARTERR=%errorlevel%
+if %STARTERR% equ 0 goto :success
+
+echo.
+echo   Service failed to start. Running agent directly to show errors:
+echo.
+set PYTHONHOME=%PYTHON_DIR%
+set PYTHONPATH=%PYTHON_DIR%;%PYTHON_DIR%\Lib;%PYTHON_DIR%\Lib\site-packages;%AGENT_DIR%
+set PATH=%PYTHON_DIR%;%PATH%
+cd /d "%AGENT_DIR%"
+"%PYTHON_DIR%\python.exe" "%AGENT_DIR%\agent.py"
+goto :done
+
+:success
+echo.
+echo ============================================================
+echo   SUCCESS
+echo.
+echo   Service : BretterIMGAgent  (running)
+echo   Server  : {{SERVER_URL}}
+echo   Logs    : %LOG_DIR%\agent.log
+echo.
+echo   Machine will appear in the console within 30 seconds.
+echo ============================================================
+
+:done
+echo.
+pause

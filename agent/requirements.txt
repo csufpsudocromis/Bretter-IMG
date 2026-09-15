@@ -1,0 +1,4 @@
+requests==2.31.0
+wmi==1.5.1; sys_platform == "win32"
+pywin32==306; sys_platform == "win32"
+pyinstaller==6.6.0

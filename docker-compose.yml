@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./images-store:/app/images-store
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:////app/data/bretter.db
+      - SECRET_KEY=${SECRET_KEY:-changeme-set-in-env}
+      - IMAGE_STORE_PATH=/app/images-store
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+    restart: unless-stopped
