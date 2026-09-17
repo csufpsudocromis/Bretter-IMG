@@ -72,7 +72,8 @@ curl -fsSL https://raw.githubusercontent.com/csufpsudocromis/Bretter-IMG/main/in
 By default, the installer disables automatic Samba user provisioning so the
 console can start without privileged share setup. Run
 `sudo ./scripts/setup_samba_images_share.sh` from the installed repo when you are
-ready to configure the image share.
+ready to configure the image share, then set `SAMBA_AUTO_PROVISION_USERS=true`
+in `server/.env` and restart the backend.
 
 ### 1. Start the Server Manually
 
