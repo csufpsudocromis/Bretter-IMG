@@ -50,7 +50,31 @@ Remotely capture, store, and deploy Windows disk images from a web dashboard.
 
 ## Quick Start
 
-### 1. Start the Server
+### One-command installer
+
+On a Linux host with `sudo`, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/csufpsudocromis/Bretter-IMG/main/install.sh | bash
+```
+
+The installer clones or updates this GitHub repo, installs backend and frontend
+dependencies, creates local runtime config/certificates, and starts the API and
+web console.
+
+To create the first admin during install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/csufpsudocromis/Bretter-IMG/main/install.sh | \
+  BRETTER_ADMIN_USER=admin BRETTER_ADMIN_PASSWORD='change-this-password' bash
+```
+
+By default, the installer disables automatic Samba user provisioning so the
+console can start without privileged share setup. Run
+`sudo ./scripts/setup_samba_images_share.sh` from the installed repo when you are
+ready to configure the image share.
+
+### 1. Start the Server Manually
 
 ```bash
 cd server
